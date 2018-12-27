@@ -47,7 +47,7 @@ namespace PerformanceProcessor
 
         // These values are results of tweaking a lot.
 
-        private const double star_scaling_factor = 0.0405;
+        private const double star_scaling_factor = 0.04075;
 
         /// <summary>
         /// In milliseconds. For difficulty calculation we will only look at the highest strain value in each time interval of size STRAIN_STEP.
@@ -162,7 +162,6 @@ namespace PerformanceProcessor
         {
             double strainValue = Math.Pow(starRating, 1.8) * 6.5 + 1.0;
 
-
             //double lengthBonus = Math.Min(1.0 + (weightedObjectCount / 20000.0), 1.2); 
             //double missDecay = Math.Min(0.99, 0.95 + (0.04 * Math.Sqrt((lengthBonus - 1) / 0.13))); // Caps at about 4000 weighted objects, misses lose .99
 
@@ -170,9 +169,8 @@ namespace PerformanceProcessor
             //strainValue *= Math.Min(1.0, (-1 / ((weightedObjectCount / 200) + 1)) + 1.1667);
             //strainValue *= lengthBonus; // Scale up somewhat for long and consistent maps
 
-            strainValue *= Math.Pow(Acc(s), 3); // Scale with accuracy, but a bit less strict than acc value
-
-            strainValue *= Math.Log10(weightedObjectCount) / 3; //weight based on map length
+            //weight based on map length
+            strainValue *= (weightedObjectCount < 1000) ? (Math.Log10(weightedObjectCount) / 2 - 0.5) : (Math.Log10(weightedObjectCount) / 3);
 
             return strainValue;
         }
@@ -187,7 +185,7 @@ namespace PerformanceProcessor
             // Values are based on experimentation.
             double accValue = (300.0 / (hitWindow300 + 21.0)); // Value is based on hitwindow
 	        accValue *= 3.5; // Multiplier for sake of appropriate value; Adjust as necessary to balance acc and strain value
-	        accValue *= Math.Pow(Acc(s), 7); // Scale with accuracy
+	        accValue *= Math.Pow(Acc(s), 12); // Scale with accuracy
             accValue *= Math.Pow(starRating, 1.1); // Scale with difficulty, slightly exponentially
 
             accValue *= 1 + 0.1f * Math.Min(1.0, weightedObjectCount / 1500.0); //slight scaling with length

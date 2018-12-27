@@ -19,12 +19,13 @@ namespace PerformanceProcessor
         /// </summary>
         internal const double DECAY_BASE = 0.30;
 
-        private const double base_speed_value = 1.05; //the default addition value
+        private const double base_speed_value = 1.0; //the default addition value
 
         //type
-        private const double base_type_bonus = 1.3; // The maximum bonus receivable when type changes
+        private const double base_type_bonus = 1.5; // The maximum bonus receivable when type changes
         private const double type_bonus_scale = 1.75; // Determines how bonus is scaled with number of objects of same type
-        private const double type_bonus_cap = 1.0; // Determines maximum bonus when swapping
+        private const double type_swap_adjust = 0.65; //Addition to denominator of bonus - affects how it scales
+        private const double type_bonus_cap = 1.25; // Determines maximum bonus when swapping
 
         private const double same_typeswitch_loss = 0.8; // The loss in bonus from going from repeating even -> even or odd -> odd
         private const double close_repeat_loss = 0.525; // The loss in bonus from repeating the same length of object twice in a row (per color)
@@ -34,11 +35,11 @@ namespace PerformanceProcessor
         private const double tiny_speedup_bonus = 0.25; // Very small speed increases
         private const double small_speedup_bonus = 1.0; // This mostly affects 1/4 -> 1/6 and other weird rhythms.
         private const double moderate_speedup_bonus = 0.5; // Speed doubling
-        private const double large_speedup_bonus = 0.8; // Anything that more than doubles speed. Affects doubles.
+        private const double large_speedup_bonus = 0.65; // Anything that more than doubles speed. Affects doubles.
 
         private const double tiny_speeddown_bonus = 0.15; // Very small speed decrease
         private const double small_speeddown_bonus = 0.425; // This mostly affects 1/6 -> 1/4, and other weird rhythms.
-        private const double large_speeddown_bonus = 0.25; // Half speed; for slowdown, no need for more specific.
+        private const double large_speeddown_bonus = 0.3; // Half speed; for slowdown, no need for more specific.
 
         public enum ObjectType
         {
@@ -125,7 +126,7 @@ namespace PerformanceProcessor
             // If we don't have the same hit type, trigger a type change!
             if (previousHitObject.kat ^ kat) // for bool xor is equivalent to != so either could be used
             {
-                double typeBonus = base_type_bonus - (type_bonus_scale / (previousHitObject.sameTypeSince + 1.0));
+                double typeBonus = base_type_bonus - (type_bonus_scale / (previousHitObject.sameTypeSince + type_swap_adjust));
                 double multiplier = 1.0;
 
 
