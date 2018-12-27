@@ -1,0 +1,11 @@
+C:\Users\Alchy\Documents\Visual Studio 2017\Projects\PerformanceProcessor\PerformanceProcessor\obj\Debug\PerformanceProcessor.csprojAssemblyReference.cache
+C:\Users\Alchy\Documents\Visual Studio 2017\Projects\PerformanceProcessor\PerformanceProcessor\obj\Debug\PerformanceProcessor.csproj.CoreCompileInputs.cache
+C:\Users\Alchy\Documents\Visual Studio 2017\Projects\PerformanceProcessor\PerformanceProcessor\bin\Debug\PerformanceProcessor.exe.config
+C:\Users\Alchy\Documents\Visual Studio 2017\Projects\PerformanceProcessor\PerformanceProcessor\bin\Debug\PerformanceProcessor.exe
+C:\Users\Alchy\Documents\Visual Studio 2017\Projects\PerformanceProcessor\PerformanceProcessor\bin\Debug\PerformanceProcessor.pdb
+C:\Users\Alchy\Documents\Visual Studio 2017\Projects\PerformanceProcessor\PerformanceProcessor\bin\Debug\Newtonsoft.Json.dll
+C:\Users\Alchy\Documents\Visual Studio 2017\Projects\PerformanceProcessor\PerformanceProcessor\bin\Debug\Newtonsoft.Json.pdb
+C:\Users\Alchy\Documents\Visual Studio 2017\Projects\PerformanceProcessor\PerformanceProcessor\bin\Debug\Newtonsoft.Json.xml
+C:\Users\Alchy\Documents\Visual Studio 2017\Projects\PerformanceProcessor\PerformanceProcessor\obj\Debug\PerformanceProcessor.csproj.CopyComplete
+C:\Users\Alchy\Documents\Visual Studio 2017\Projects\PerformanceProcessor\PerformanceProcessor\obj\Debug\PerformanceProcessor.exe
+C:\Users\Alchy\Documents\Visual Studio 2017\Projects\PerformanceProcessor\PerformanceProcessor\obj\Debug\PerformanceProcessor.pdb
