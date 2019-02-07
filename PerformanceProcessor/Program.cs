@@ -15,7 +15,7 @@ namespace PerformanceProcessor
 {
     class Program
     {
-        const string osuAPIKey = "k=3d77d8ba6d081a56c808edb1539057f6d554eb7d";
+        const string osuAPIKey = null;
         static HttpClient client = new HttpClient();
 
         static async Task Main(string[] args)
