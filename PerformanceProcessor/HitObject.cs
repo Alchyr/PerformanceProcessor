@@ -19,27 +19,32 @@ namespace PerformanceProcessor
         /// </summary>
         internal const double DECAY_BASE = 0.30;
 
-        private const double base_speed_value = 1.0; //the default addition value
+        private const double base_speed_value = 0.925; //the default addition value
+        private const double color_speed_value = 1.2; //the addition value for don/kat speed
+        private const double color_decay_scale = 250;
 
         //type
+        private const double type_change_scale = 0.7; // Scales the final addition value.
+
         private const double base_type_bonus = 1.5; // The maximum bonus receivable when type changes
         private const double type_bonus_scale = 1.75; // Determines how bonus is scaled with number of objects of same type
         private const double type_swap_adjust = 0.65; //Addition to denominator of bonus - affects how it scales
         private const double type_bonus_cap = 1.25; // Determines maximum bonus when swapping
 
         private const double same_typeswitch_loss = 0.8; // The loss in bonus from going from repeating even -> even or odd -> odd
-        private const double close_repeat_loss = 0.525; // The loss in bonus from repeating the same length of object twice in a row (per color)
-        private const double late_repeat_loss = 0.75; // The loss in bonus from repeating the same length of object with a gap between (per color)
+        private const double even_typeswitch_loss = 0.7; // The loss in bonus from going from repeating even -> even or odd -> odd
+        private const double close_repeat_loss = 0.65; // The loss in bonus from repeating the same length of object twice in a row (per color)
+        private const double late_repeat_loss = 0.8; // The loss in bonus from repeating the same length of object with a gap between (per color)
 
         //rhythm
         private const double tiny_speedup_bonus = 0.25; // Very small speed increases
         private const double small_speedup_bonus = 1.0; // This mostly affects 1/4 -> 1/6 and other weird rhythms.
-        private const double moderate_speedup_bonus = 0.5; // Speed doubling
-        private const double large_speedup_bonus = 0.65; // Anything that more than doubles speed. Affects doubles.
+        private const double moderate_speedup_bonus = 0.6; // Speed doubling
+        private const double large_speedup_bonus = 0.4; // Anything that more than doubles speed. Affects doubles.
 
         private const double tiny_speeddown_bonus = 0.15; // Very small speed decrease
-        private const double small_speeddown_bonus = 0.425; // This mostly affects 1/6 -> 1/4, and other weird rhythms.
-        private const double large_speeddown_bonus = 0.3; // Half speed; for slowdown, no need for more specific.
+        private const double small_speeddown_bonus = 0.4; // This mostly affects 1/6 -> 1/4, and other weird rhythms.
+        private const double large_speeddown_bonus = 0.2; // Half speed; for slowdown, no need for more specific.
 
         public enum ObjectType
         {
@@ -56,7 +61,13 @@ namespace PerformanceProcessor
         public int hitsounds { get; set; }
         public bool kat { get; set; } = false;
 
-        public double Strain = 1.0;
+        public double Strain = 0.0;
+
+        public double BaseStrain = 0.0;
+        public double DonStrain = 0.0;
+        public int lastDonPos = 0;
+        public double KatStrain = 0.0;
+        public int lastKatPos = 0;
 
         public ObjectType type { get; set; }
 
@@ -79,38 +90,66 @@ namespace PerformanceProcessor
             this.previousHitObject = previousHitObject;
 
             timeElapsed = (pos - previousHitObject.pos) / timeRate;
-            double decay = Math.Pow(DECAY_BASE, timeElapsed / 1000);
 
-            double addition = base_speed_value;
+
+            //Decay
+            double decay = Math.Max(0, Math.Pow(DECAY_BASE, timeElapsed / 1000) - 0.01);
+            if (timeElapsed > 1000) // Objects more than 1 second apart gain somewhat exponentially less strain.
+            {
+                decay /= 1 + ((timeElapsed - 1000) / 100);
+            }
+
+            //Scaling as speed increases
+            double rhythmAdditionScale = 0.5 + (0.5 * timeElapsed / 65.0);
+            if (timeElapsed > 65)
+            {
+                rhythmAdditionScale = 1;
+            }
+
             double typeAddition = 0;
             double rhythmAddition = 0;
 
-            if (timeElapsed > 1000) // Objects more than 1 second apart gain no strain.
-            {
-                Strain = previousHitObject.Strain * decay;
-                return;
-            }
-        
-            // Only if not a slider or spinner is any additional strain added
-            if (previousHitObject.type == ObjectType.Circle && type == ObjectType.Circle
-                && pos - previousHitObject.pos < 1000) // And we only want to check out hitobjects which aren't so far in the past
+
+            // Only if not a slider or spinner is any rhythm/type strain added
+            if (previousHitObject.type == ObjectType.Circle && type == ObjectType.Circle) // And we only want to check out hitobjects which aren't so far in the past
             {
                 // To remove value of sliders/spinners, set default addition to 0 along with type and rhythm additions, and increase to 1 here
-                typeAddition = typeChangeAddition(previousHitObject);
-                rhythmAddition = rhythmChangeAddition(previousHitObject);
+                typeAddition = typeChangeAddition(previousHitObject) * decay * type_change_scale;
+                rhythmAddition = rhythmChangeAddition(previousHitObject) * decay * rhythmAdditionScale;
             }
 
-            if (timeElapsed < 65) // Adjust weighting as objects get very fast
+
+            // Speed
+            BaseStrain = (previousHitObject.BaseStrain + base_speed_value + typeAddition + rhythmAddition) * decay;
+
+            if (kat)
             {
-                addition *= 0.6 + (0.4 * timeElapsed / 65.0); //Reduce base addition as speed increases to prevent extreme increases from bpm
-                //No loss to addition from color as speed increases, this is where most of the complexity comes from
-                rhythmAddition *= timeElapsed / 65.0; //extreme loss as speed increases; the faster you go you basically have to play full alt which makes rhythms a bit more irrelevant
+                DonStrain = previousHitObject.DonStrain;
+                lastDonPos = previousHitObject.lastDonPos;
+
+                double katElapsed = (pos - previousHitObject.lastKatPos) / timeRate;
+                decay = Math.Max(0, Math.Pow(DECAY_BASE, katElapsed / color_decay_scale) - 0.01);
+
+                KatStrain = (previousHitObject.KatStrain + color_speed_value) * decay;
+
+                lastKatPos = pos;
+
+                Strain = (BaseStrain + (KatStrain * 0.5)) / 1.5;
             }
+            else
+            {
+                KatStrain = previousHitObject.KatStrain;
+                lastKatPos = previousHitObject.lastKatPos;
 
-            addition += Math.Sqrt(Math.Pow(typeAddition, 2) + Math.Pow(rhythmAddition, 2)); //decrease bonus spike when both bonuses are applied on same object
+                double donElapsed = (pos - previousHitObject.lastDonPos) / timeRate;
+                decay = Math.Max(0, Math.Pow(DECAY_BASE, donElapsed / color_decay_scale) - 0.01);
 
+                DonStrain = (previousHitObject.DonStrain + color_speed_value) * decay;
 
-            Strain = (previousHitObject.Strain * decay) + addition;
+                lastDonPos = pos;
+
+                Strain = (BaseStrain + (DonStrain * 0.5)) / 1.5;
+            }
         }
 
         private double typeChangeAddition(HitObject previousHitObject)
@@ -135,6 +174,9 @@ namespace PerformanceProcessor
                     if (previousHitObject.sameTypeSince % 2 == previousLengths[0][0] % 2) //previous don length was same even/odd
                         multiplier *= same_typeswitch_loss;
 
+                    if (previousHitObject.sameTypeSince % 2 == 0)
+                        multiplier *= even_typeswitch_loss;
+
                     if (previousLengths[1][0] == previousHitObject.sameTypeSince)
                         multiplier *= close_repeat_loss;
 
@@ -148,6 +190,9 @@ namespace PerformanceProcessor
                 {
                     if (previousHitObject.sameTypeSince % 2 == previousLengths[1][0] % 2) //previous kat length was same even/odd
                         multiplier *= same_typeswitch_loss;
+
+                    if (previousHitObject.sameTypeSince % 2 == 0)
+                        multiplier *= even_typeswitch_loss;
 
                     if (previousLengths[0][0] == previousHitObject.sameTypeSince)
                         multiplier *= close_repeat_loss;

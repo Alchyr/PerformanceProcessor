@@ -179,14 +179,14 @@ namespace PerformanceProcessor
                         }
                     }
                     Console.WriteLine();
-                    Console.WriteLine("Would you like to continue anyways? (enter y/Y to continue, anything else will stop)");
+                    //Console.WriteLine("Would you like to continue anyways? (enter y/Y to continue, anything else will stop)");
 
-                    string input = Console.ReadLine();
+                    //string input = Console.ReadLine();
 
-                    if (!input.ToLower().StartsWith("y"))
-                    {
-                        return;
-                    }
+                    //if (!input.ToLower().StartsWith("y"))
+                    //{
+                    //    return;
+                    //}
                 }
 
                 Console.WriteLine("Beginning score processing.");

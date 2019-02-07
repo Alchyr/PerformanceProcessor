@@ -47,7 +47,7 @@ namespace PerformanceProcessor
 
         // These values are results of tweaking a lot.
 
-        private const double star_scaling_factor = 0.04075;
+        private const double star_scaling_factor = 0.08;
 
         /// <summary>
         /// In milliseconds. For difficulty calculation we will only look at the highest strain value in each time interval of size STRAIN_STEP.
@@ -123,7 +123,8 @@ namespace PerformanceProcessor
                 sr = CalculateDifficulty() * star_scaling_factor;
                 //weighted object count is also stored, recalculated each time
 
-                newValue = StrainValue(s, sr) + AccValue(s, sr, hitWindow300(m, timerate, ez, hr));
+                //newValue = StrainValue(s, sr) + AccValue(s, sr, hitWindow300(m, timerate, ez, hr));
+                //newValue = PlayValue(s, sr, hitWindow300(m, timerate, ez, hr));
 
                 double multiplier = 1.1;
 
@@ -138,15 +139,45 @@ namespace PerformanceProcessor
 
                 if (hd)
                 {
-                    multiplier *= 1.06;
+                    if (ez)
+                    {
+                        multiplier *= 1.05;
+                    }
+                    else
+                    {
+                        multiplier *= 1.1;
+                    }
                 }
 
                 if (hr)
-                    multiplier *= 1.02;
-
-                multiplier *= Math.Pow(.985, s.countmiss); //somewhat exponential loss for misses
+                    multiplier *= 1.05;
 
 
+                //Using old calculation
+
+                //double strainValue = oldComputeStrainValue(s, sr);
+                //double accuracyValue = oldComputeAccValue(s, hitWindow300(m, timerate, ez, hr));
+
+                //Using new calculation
+
+                double strainValue = StrainValue(s, sr);
+                double accuracyValue = AccValue(s, sr, hitWindow300(m, timerate, ez, hr));
+
+                double totalValue =
+                    Math.Pow(
+                        Math.Pow(strainValue, 1.2) +
+                        Math.Pow(accuracyValue, 1.2), 1.0 / 1.2
+                    );
+
+
+
+                //multiplier *= Math.Pow(.9825, s.countmiss); //somewhat exponential loss for misses
+
+                //weight based on map length
+                //multiplier *= (weightedObjectCount < 1000) ? (Math.Log10(weightedObjectCount / 10) / 2) : (Math.Log10(weightedObjectCount) / 3);
+                //multiplier *= (Math.Log10(weightedObjectCount) / 3.1);
+
+                newValue = totalValue;
                 newValue *= multiplier;
             }
             else
@@ -158,23 +189,32 @@ namespace PerformanceProcessor
         }
 
 
+        private double PlayValue(Score s, double starRating, double hitWindow300)
+        {
+            if (hitWindow300 <= 0 || starRating <= 0)
+            {
+                return 0;
+            }
+
+            // Values are based on experimentation.
+            double value = Math.Pow(starRating, 1.95) * Math.Pow(Acc(s), 4.5) * 15; // Value is based on star rating and accuracy
+
+            value -= 5 * Math.Log10(hitWindow300 - 10) * Math.Pow(starRating, 1.95) * Math.Pow(Acc(s), 7); // Scale based on hitwindow. Larger hitwindow, more loss.
+
+            return value;
+        }
+
+
         private double StrainValue(Score s, double starRating)
         {
-            double strainValue = Math.Pow(starRating, 1.8) * 6.5 + 1.0;
+            double strainValue = Math.Pow(starRating, 1.85) * 6.5 + 0.1; //0.1 gives a small minimum
 
-            //double lengthBonus = Math.Min(1.0 + (weightedObjectCount / 20000.0), 1.2); 
-            //double missDecay = Math.Min(0.99, 0.95 + (0.04 * Math.Sqrt((lengthBonus - 1) / 0.13))); // Caps at about 4000 weighted objects, misses lose .99
+            strainValue *= Math.Min(1.25, Math.Pow(weightedObjectCount / 1000.0, 0.2));
 
-            //strainValue *= Math.Min(1.0, (weightedObjectCount + 3000.0) / 4000.0); // Scale down somewhat on shorter maps
-            //strainValue *= Math.Min(1.0, (-1 / ((weightedObjectCount / 200) + 1)) + 1.1667);
-            //strainValue *= lengthBonus; // Scale up somewhat for long and consistent maps
-
-            //weight based on map length
-            strainValue *= (weightedObjectCount < 1000) ? (Math.Log10(weightedObjectCount) / 2 - 0.5) : (Math.Log10(weightedObjectCount) / 3);
+            strainValue *= Math.Pow(Acc(s), 2);
 
             return strainValue;
         }
-
         private double AccValue(Score s, double starRating, double hitWindow300)
         {
 	        if (hitWindow300 <= 0)
@@ -183,12 +223,14 @@ namespace PerformanceProcessor
 	        }
 
             // Values are based on experimentation.
-            double accValue = (300.0 / (hitWindow300 + 21.0)); // Value is based on hitwindow
-	        accValue *= 3.5; // Multiplier for sake of appropriate value; Adjust as necessary to balance acc and strain value
-	        accValue *= Math.Pow(Acc(s), 12); // Scale with accuracy
-            accValue *= Math.Pow(starRating, 1.1); // Scale with difficulty, slightly exponentially
+            double accValue = (300.0 / (hitWindow300 + 21.0)) * 2; // Value is based on hitwindow
+	        accValue *= Math.Pow(Acc(s), 14); // Scale with accuracy
+            accValue *= Math.Pow(starRating, 1.5); // Scale with difficulty, slightly exponentially
 
-            accValue *= 1 + 0.1f * Math.Min(1.0, weightedObjectCount / 1500.0); //slight scaling with length
+            // Bonus for many hitcircles - it's harder to keep good accuracy up for longer
+            return accValue * Math.Min(1.15, Math.Pow(weightedObjectCount / 1000.0, 0.2));
+
+            //accValue *= 1 + 0.1f * Math.Min(1.0, weightedObjectCount / 1500.0); //slight scaling with length
 
             //accValue *= Math.Log10(weightedObjectCount) / 3;
 
@@ -199,8 +241,41 @@ namespace PerformanceProcessor
             //accValue *= Math.Min(1.0 + (weightedObjectCount / 15000), 1.33); // Scale up for long and consistent maps, with a high cap
 
 
-            return accValue;
+            //return accValue;
         }
+
+
+
+        //OLD CALCULATIONS ___________________________________________________________________
+
+        private double oldComputeStrainValue(Score s, double starRating)
+        {
+            double strainValue = Math.Pow(5.0 * Math.Max(1.0, starRating / 0.0075) - 4.0, 2.0) / 100000.0;
+
+            // Longer maps are worth more
+            double lengthBonus = 1 + 0.1f * Math.Min(1.0, weightedObjectCount / 1000.0);
+            strainValue *= lengthBonus;
+
+            // Penalize misses exponentially. This mainly fixes tag4 maps and the likes until a per-hitobject solution is available
+            strainValue *= Math.Pow(0.985, s.countmiss);
+
+            // Scale the speed value with accuracy _slightly_
+            return strainValue * Acc(s);
+        }
+        private double oldComputeAccValue(Score s, double hitWindow300)
+        {
+            if (hitWindow300 <= 0)
+                return 0;
+
+            // Lots of arbitrary values from testing.
+            // Considering to use derivation from perfect accuracy in a probabilistic manner - assume normal distribution
+            double accValue = Math.Pow(150.0 / hitWindow300, 1.1) * Math.Pow(Acc(s), 15) * 22.0;
+
+            // Bonus for many hitcircles - it's harder to keep good accuracy up for longer
+            return accValue * Math.Min(1.15, Math.Pow(weightedObjectCount / 1000.0, 0.25));
+        }
+
+
 
 
 
